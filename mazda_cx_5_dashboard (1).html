@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mazda CX-5 (KE) — Термодинамика и Шины</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b1120;
+            color: #e2e8f0;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .card-panel {
+            background: linear-gradient(180deg, #162033 0%, #0f172a 100%);
+            border: 1px solid #26354d;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+        .stage-card {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid #26354d;
+            transition: border-color 0.2s ease, transform 0.2s ease;
+        }
+        .stage-card:hover {
+            border-color: #3b82f6;
+        }
+
+        /* Кастомные ползунки */
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 999px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #f8fafc;
+            cursor: pointer;
+            margin-top: -8px;
+            border: 3px solid #3b82f6;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+        input[type=range]:disabled::-webkit-slider-runnable-track {
+            background: #0f172a;
+            border-color: #1e293b;
+            cursor: not-allowed;
+        }
+        input[type=range]:disabled::-webkit-slider-thumb {
+            border-color: #475569;
+            background: #64748b;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        /* Чекбокс */
+        .custom-checkbox {
+            accent-color: #3b82f6;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="p-3 sm:p-6 min-h-screen flex items-start lg:items-center justify-center">
+
+    <div class="w-full max-w-6xl mx-auto space-y-5">
+        
+        <!-- Верхняя панель -->
+        <header class="card-panel rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="space-y-1">
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_10px_#38bdf8]"></span>
+                    <h1 class="text-xl sm:text-2xl font-bold text-white tracking-tight">Mazda CX-5 <span class="text-slate-400 font-normal">KE</span></h1>
+                    <span class="text-xs font-medium text-sky-300 bg-sky-950/70 border border-sky-800/60 px-2.5 py-0.5 rounded-md mono">2.0L SkyActiv-G (PE-VPS)</span>
+                    <span class="text-xs font-medium text-amber-300 bg-amber-950/60 border border-amber-800/50 px-2.5 py-0.5 rounded-md mono">6AT FW6A-EL</span>
+                </div>
+                <p class="text-xs sm:text-sm text-slate-400">Нелинейная термодинамическая модель прогрева узлов и газодинамический расчет давления в шинах</p>
+            </div>
+            
+            <button id="gpsSyncBtn" type="button" class="flex items-center gap-2.5 px-4 py-2.5 bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 border border-slate-600/80 hover:border-sky-400/70 rounded-xl transition-all w-full sm:w-auto justify-center shadow-sm active:scale-[0.99]">
+                <svg id="gpsIcon" class="w-4 h-4 text-sky-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span id="gpsBtnLabel" class="text-xs sm:text-sm font-medium">Синхронизация по спутникам GPS</span>
+            </button>
+        </header>
+
+        <!-- Информационный блок статуса геолокации -->
+        <div id="geoStatusBox" class="hidden rounded-xl p-3.5 text-xs sm:text-sm border transition-all"></div>
+
+        <!-- Основная сетка: Слева ДВС + АКПП (7 колонок), Справа Шины (5 колонок) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            
+            <!-- ЛЕВЫЙ БЛОК: ТЕРМОДИНАМИКА ДВС И АКПП -->
+            <section class="card-panel rounded-2xl p-4 sm:p-6 flex flex-col justify-between gap-6 lg:col-span-7">
+                <div class="space-y-5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                        <div>
+                            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Математическая модель прогрева</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Пошаговое интегрирование теплового баланса (Δt = 1 сек, степень сжатия 14:1)</p>
+                        </div>
+                        <span id="viscosityCstBadge" class="text-xs mono bg-slate-900 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700/80">
+                            Вязкость при пуске: — сСт
+                        </span>
+                    </div>
+
+                    <!-- Ползунки и селекторы входных параметров ДВС -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-slate-900/50 p-4 rounded-xl border border-slate-800/90">
+                        <!-- Температура воздуха на улице -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-baseline">
+                                <label for="ambientTempInput" class="text-xs sm:text-sm font-medium text-slate-300">Температура на улице</label>
+                                <span id="ambientTempValue" class="mono text-base sm:text-lg font-bold text-sky-400">-10°C</span>
+                            </div>
+                            <input type="range" id="ambientTempInput" min="-40" max="40" step="1" value="-10">
+                            <div class="flex justify-between text-[10px] mono text-slate-500">
+                                <span>-40°C</span>
+                                <span>-20°C</span>
+                                <span>0°C</span>
+                                <span>+20°C</span>
+                                <span>+40°C</span>
+                            </div>
+                        </div>
+
+                        <!-- Обороты при движении -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-baseline">
+                                <label for="drivingRpmInput" id="drivingRpmLabel" class="text-xs sm:text-sm font-medium text-slate-300">Средние обороты в движении</label>
+                                <span id="drivingRpmValue" class="mono text-base sm:text-lg font-bold text-white">1600 об/мин</span>
+                            </div>
+                            <input type="range" id="drivingRpmInput" min="1000" max="3000" step="50" value="1600">
+                            <div class="flex justify-between text-[10px] mono text-slate-500">
+                                <span>1000</span>
+                                <span>1600</span>
+                                <span>2000</span>
+                                <span>2500</span>
+                                <span>3000</span>
+                            </div>
+                        </div>
+
+                        <!-- Селектор вязкости масла (по умолчанию 5W-40) и Блок кондиционера -->
+                        <div class="sm:col-span-2 pt-3 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                            <div class="space-y-1.5">
+                                <div class="text-xs sm:text-sm font-medium text-slate-300">Вязкость масла ДВС (SAE)</div>
+                                <div class="grid grid-cols-3 gap-2 w-full" role="group">
+                                    <button type="button" data-oil="0W-20" class="oil-btn px-3 py-1.5 rounded-lg text-xs font-semibold mono border transition-all bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500">
+                                        0W-20
+                                    </button>
+                                    <button type="button" data-oil="5W-30" class="oil-btn px-3 py-1.5 rounded-lg text-xs font-semibold mono border transition-all bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500">
+                                        5W-30
+                                    </button>
+                                    <button type="button" data-oil="5W-40" class="oil-btn px-3 py-1.5 rounded-lg text-xs font-semibold mono border transition-all bg-sky-600/20 text-sky-300 border-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.25)]">
+                                        5W-40
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Галочка: Блок кондиционера (Авто 22°C) -->
+                            <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3">
+                                <div class="space-y-0.5">
+                                    <label for="hvacCheckbox" class="text-xs sm:text-sm font-medium text-slate-200 cursor-pointer block">
+                                        Блок кондиционера (Авто 22°C)
+                                    </label>
+                                    <div id="hvacPowerSubtext" class="text-[11px] text-slate-400 mono">
+                                        Отбор тепла печкой: активен
+                                    </div>
+                                </div>
+                                <input type="checkbox" id="hvacCheckbox" class="custom-checkbox shrink-0" checked>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Карточки 4 этапов прогрева -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        
+                        <!-- Этап 1: Катализатор и AWS -->
+                        <div class="stage-card rounded-xl p-4 flex flex-col justify-between relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-violet-500"></div>
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <span class="text-xs font-semibold text-violet-400 uppercase tracking-wide">Этап 1 · Система AWS</span>
+                                    <span id="stage1EndTemp" class="text-[11px] mono text-slate-400 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-800">ОЖ: —°C</span>
+                                </div>
+                                <div class="text-xs text-slate-300 font-medium">Прогрев нейтрализатора и стабилизация VVT</div>
+                                <div class="text-[11px] text-slate-500 mt-0.5">Сброс прогревочных оборотов с ~1500 об/мин до холостого хода</div>
+                            </div>
+                            <div class="mt-4 pt-2.5 border-t border-slate-800/80 flex items-baseline justify-between">
+                                <span class="text-[11px] text-slate-400">Длительность этапа:</span>
+                                <span id="stage1Duration" class="text-xl font-bold text-white mono">—</span>
+                            </div>
+                        </div>
+
+                        <!-- Этап 2: АКПП FW6A-EL -->
+                        <div class="stage-card rounded-xl p-4 flex flex-col justify-between relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wide">Этап 2 · АКПП FW6A-EL</span>
+                                    <span id="stage2EndTemp" class="text-[11px] mono text-slate-400 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-800">ОЖ: —°C</span>
+                                </div>
+                                <div class="text-xs text-slate-300 font-medium">Прокачка жидкости ATF-FZ в режиме D/R</div>
+                                <div class="text-[11px] text-slate-500 mt-0.5">Удержание селектора на тормозе под нагрузкой гидротрансформатора</div>
+                            </div>
+                            <div class="mt-4 pt-2.5 border-t border-slate-800/80 space-y-1">
+                                <div class="flex items-baseline justify-between">
+                                    <span class="text-[11px] text-slate-400">Длительность этапа:</span>
+                                    <span id="stage2Duration" class="text-xl font-bold text-white mono">—</span>
+                                </div>
+                                <div id="stage2Cumulative" class="text-[11px] mono text-emerald-400/90 text-right">
+                                    Суммарно с запуска: —
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Этап 3: Синяя лампа (55°C) -->
+                        <div class="stage-card rounded-xl p-4 flex flex-col justify-between relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-sky-500"></div>
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-1.5">
+                                    <span class="text-xs font-semibold text-sky-400 uppercase tracking-wide">Этап 3 · Синий индикатор (55°C)</span>
+                                    <label for="inMotionCheckbox" class="flex items-center gap-1.5 bg-slate-900/95 px-2.5 py-1 rounded-md border border-slate-700 cursor-pointer select-none hover:border-sky-500/70 transition-colors">
+                                        <input type="checkbox" id="inMotionCheckbox" class="custom-checkbox" checked>
+                                        <span class="text-[11px] font-medium text-slate-200">В движении</span>
+                                    </label>
+                                </div>
+                                <div class="text-xs text-slate-300 font-medium">Нагрев охлаждающей жидкости до 55°C</div>
+                                <div id="stage3ModeHint" class="text-[11px] text-slate-500 mt-0.5">Плавная нагрузка при текущих оборотах движения</div>
+                            </div>
+                            <div class="mt-4 pt-2.5 border-t border-slate-800/80 space-y-1">
+                                <div class="flex items-baseline justify-between">
+                                    <span class="text-[11px] text-slate-400">Длительность этапа:</span>
+                                    <span id="stage3Duration" class="text-xl font-bold text-white mono">—</span>
+                                </div>
+                                <div id="stage3Cumulative" class="text-[11px] mono text-sky-400/90 text-right">
+                                    Суммарно с запуска: —
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Этап 4: Рабочая температура (90°C) -->
+                        <div class="stage-card rounded-xl p-4 flex flex-col justify-between relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <span class="text-xs font-semibold text-amber-400 uppercase tracking-wide">Этап 4 · Рабочий режим (90°C)</span>
+                                    <span id="stage4OilTemp" class="text-[11px] mono text-slate-400 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-800">Масло: —°C</span>
+                                </div>
+                                <div class="text-xs text-slate-300 font-medium">Выход на полное тепловое равновесие (55°C → 90°C)</div>
+                                <div class="text-[11px] text-slate-500 mt-0.5">С учетом отбора тепла в салон и открытия термостата (82°C)</div>
+                            </div>
+                            <div class="mt-4 pt-2.5 border-t border-slate-800/80 space-y-1">
+                                <div class="flex items-baseline justify-between">
+                                    <span class="text-[11px] text-slate-400">Длительность этапа:</span>
+                                    <span id="stage4Duration" class="text-xl font-bold text-white mono">—</span>
+                                </div>
+                                <div id="stage4Cumulative" class="text-[11px] mono text-amber-400/90 text-right">
+                                    Суммарно с запуска: —
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Сводная техническая строка по состоянию масла и тепловому балансу -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+                    <div class="flex items-center gap-2 text-slate-400">
+                        <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+                        <span id="thermalSummaryNote">Режим прогрева в движении минимизирует конденсацию топлива в картере</span>
+                    </div>
+                    <span id="totalWarmupBadge" class="mono text-slate-300 font-semibold shrink-0 bg-slate-800 px-2.5 py-1 rounded border border-slate-700">
+                        Полный цикл: —
+                    </span>
+                </div>
+            </section>
+
+            <!-- ПРАВЫЙ БЛОК: ШИННЫЙ ТЕРМО-КОРРЕКТОР -->
+            <section class="card-panel rounded-2xl p-4 sm:p-6 flex flex-col justify-between gap-6 lg:col-span-5">
+                <div class="space-y-5">
+                    <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Шинный термо-корректор</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Закон Шарля (Гей-Люссака) для реального газа + деформация корда</p>
+                        </div>
+                        <span class="text-xs mono text-slate-400 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">R17 / R19</span>
+                    </div>
+
+                    <!-- Настройки давления и температур -->
+                    <div class="space-y-5 bg-slate-900/50 p-4 rounded-xl border border-slate-800/90">
+                        
+                        <!-- 1. Эталонное (рекомендуемое) давление -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-baseline">
+                                <label for="targetPressureInput" class="text-xs sm:text-sm font-medium text-slate-300">Целевое (паспортное) давление</label>
+                                <span id="targetPressureValue" class="mono text-base sm:text-lg font-bold text-emerald-400">2.30 бар</span>
+                            </div>
+                            <input type="range" id="targetPressureInput" min="1.00" max="3.50" step="0.05" value="2.30">
+                            <div class="flex justify-between text-[10px] mono text-slate-500">
+                                <span>1.0 бар</span>
+                                <span>1.8 бар</span>
+                                <span>2.3 бар (Норма CX-5)</span>
+                                <span>3.5 бар</span>
+                            </div>
+                        </div>
+
+                        <!-- 2. Температура воздуха при подкачке колёс -->
+                        <div class="space-y-2 pt-3 border-t border-slate-800/80">
+                            <div class="flex justify-between items-baseline">
+                                <label for="inflationTempInput" class="text-xs sm:text-sm font-medium text-slate-300">Температура воздуха при подкачке колёс</label>
+                                <span id="inflationTempValue" class="mono text-base sm:text-lg font-bold text-white">+20°C</span>
+                            </div>
+                            <input type="range" id="inflationTempInput" min="-40" max="40" step="1" value="20">
+                            <div class="flex justify-between text-[10px] mono text-slate-500">
+                                <span>-40°C (Мороз)</span>
+                                <span>0°C</span>
+                                <span>+20°C (Бокс)</span>
+                                <span>+40°C</span>
+                            </div>
+                        </div>
+
+                        <!-- 3. Дублирующий синхронизированный ползунок уличной температуры -->
+                        <div class="space-y-2 pt-3 border-t border-slate-800/80">
+                            <div class="flex justify-between items-baseline">
+                                <label for="tireAmbientTempInput" class="text-xs sm:text-sm font-medium text-slate-300">Температура на улице</label>
+                                <div class="flex items-center gap-2">
+                                    <span id="tempDeltaBadge" class="text-[11px] mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">ΔT: -30°C</span>
+                                    <span id="tireAmbientTempMirror" class="mono text-base sm:text-lg font-bold text-sky-400">-10°C</span>
+                                </div>
+                            </div>
+                            <input type="range" id="tireAmbientTempInput" min="-40" max="40" step="1" value="-10">
+                            <div class="flex justify-between text-[10px] mono text-slate-500">
+                                <span>-40°C</span>
+                                <span>-20°C</span>
+                                <span>0°C</span>
+                                <span>+20°C</span>
+                                <span>+40°C</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Результаты расчета давления -->
+                    <div class="space-y-3.5">
+                        <!-- Главная карточка: Значение на манометре при подкачке -->
+                        <div class="bg-slate-900/90 rounded-xl p-4 sm:p-5 border border-slate-700/80 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 px-3 py-1 bg-sky-950/90 border-b border-l border-sky-800/60 rounded-bl-lg text-[11px] mono text-sky-300" id="pressureCompensationTag">
+                                Поправка: +0.34 бар
+                            </div>
+                            <div class="text-xs text-slate-400 mb-1.5">Рекомендуемое давление при подкачке (<span id="labelInflTemp">+20°C</span>):</div>
+                            <div class="flex items-baseline gap-2.5 my-1">
+                                <span id="requiredInflationPressure" class="text-3xl sm:text-4xl font-bold text-white mono tracking-tight">2.64</span>
+                                <span class="text-sm font-medium text-slate-400 mono">бар</span>
+                                <span id="requiredInflationKpa" class="text-xs text-slate-500 mono ml-auto">(264 кПа / 38.3 PSI)</span>
+                            </div>
+                            <p id="tireCompensationExplanation" class="text-xs text-slate-400 mt-2.5 pt-2.5 border-t border-slate-800/90 leading-relaxed">
+                                При переходе из температурной среды <span class="text-slate-200 mono">+20°C</span> в уличные условия (<span class="text-slate-200 mono">-10°C</span>) рабочее давление стабилизируется на целевой отметке <span class="text-emerald-400 font-semibold mono">2.30 бар</span>.
+                            </p>
+                        </div>
+
+                        <!-- Вторичная карточка: Фактическое давление на улице без поправки -->
+                        <div class="bg-slate-900/60 rounded-xl p-4 border border-slate-800 flex items-center justify-between gap-4">
+                            <div class="space-y-0.5">
+                                <div class="text-xs text-slate-300 font-medium">Фактическое давление на улице без поправки</div>
+                                <div class="text-[11px] text-slate-500">Исходная накачка <span id="unadjustedBaseLabel" class="mono text-slate-400">2.30 бар</span> при температуре <span id="unadjustedTempLabel" class="mono text-slate-400">+20°C</span></div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <div id="unadjustedResultPressure" class="text-lg sm:text-xl font-bold mono text-amber-400">1.99 бар</div>
+                                <div id="unadjustedStatusText" class="text-[10px] font-medium uppercase tracking-wider text-amber-500">Дефицит 0.31 бар</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- Нижняя панель синхронизации по спутникам GPS -->
+        <footer class="card-panel rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="space-y-0.5">
+                    <div class="text-xs sm:text-sm font-semibold text-slate-200">Быстрое обновление метеоданных</div>
+                    <p class="text-xs text-slate-400">Синхронизация обоих ползунков уличной температуры по текущим координатам GPS и Open-Meteo</p>
+                </div>
+                <button id="gpsSyncBtnBottom" type="button" class="flex items-center gap-2.5 px-4 py-2.5 bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 border border-slate-600/80 hover:border-sky-400/70 rounded-xl transition-all w-full sm:w-auto justify-center shadow-sm active:scale-[0.99]">
+                    <svg class="w-4 h-4 text-sky-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span id="gpsBtnLabelBottom" class="text-xs sm:text-sm font-medium">Синхронизация по спутникам GPS</span>
+                </button>
+            </div>
+            <div id="geoStatusBoxBottom" class="hidden rounded-xl p-3.5 text-xs sm:text-sm border transition-all"></div>
+        </footer>
+    </div>
+
+    <script>
+        /**
+         * ФИЗИКО-МАТЕМАТИЧЕСКОЕ ЯДРО
+         * Автомобиль: Mazda CX-5 (KE, 2013), 2.0L SkyActiv-G (PE-VPS), 6AT (FW6A-EL)
+         *
+         * 1. Модель вязкости моторного масла по уравнению Вальтера (ASTM D341):
+         *    log10(log10(v + 0.7)) = A - B * log10(T_K)
+         */
+        const OIL_PROFILES = {
+            '0W-20': { v40: 43.0, v100: 8.2, pumpLimitCst: 2600, frictionFactor: 0.94, thermalConductivity: 1.04 },
+            '5W-30': { v40: 62.0, v100: 10.6, pumpLimitCst: 3200, frictionFactor: 1.00, thermalConductivity: 1.00 },
+            '5W-40': { v40: 85.0, v100: 14.0, pumpLimitCst: 3800, frictionFactor: 1.07, thermalConductivity: 0.95 }
+        };
+
+        // Вычисление кинематической вязкости (сСт) при заданной температуре в °C по ASTM D341
+        function getKinematicViscosityCst(oilGrade, tempC) {
+            const profile = OIL_PROFILES[oilGrade] || OIL_PROFILES['5W-40'];
+            const clampedT = Math.max(-42, Math.min(130, tempC));
+            const T1 = 40 + 273.15;
+            const T2 = 100 + 273.15;
+            const TK = clampedT + 273.15;
+
+            const W1 = Math.log10(Math.log10(profile.v40 + 0.7));
+            const W2 = Math.log10(Math.log10(profile.v100 + 0.7));
+
+            const B = (W1 - W2) / (Math.log10(T2) - Math.log10(T1));
+            const A = W1 + B * Math.log10(T1);
+
+            const W = A - B * Math.log10(TK);
+            const viscosity = Math.pow(10, Math.pow(10, W)) - 0.7;
+            return Math.max(2.0, Math.min(45000, viscosity));
+        }
+
+        /**
+         * Пошаговое численное интегрирование теплового баланса двигателя PE-VPS (шаг dt = 1 сек)
+         */
+        function runThermodynamicSimulation(ambientTemp, drivingRpm, oilGrade, isInMotion, isHvacOn) {
+            const oilSpec = OIL_PROFILES[oilGrade];
+            const startViscosity = getKinematicViscosityCst(oilGrade, ambientTemp);
+
+            let T_coolant = ambientTemp;
+            let T_oil = ambientTemp;
+            let T_cabin = ambientTemp;
+            let peakHvacKw = 0;
+
+            const C_coolant_base = 38.0; // кДж/К
+            const C_oil_base = 27.5;     // кДж/К
+            const C_cabin = 24.0;        // кДж/К
+
+            function stepSecond(rpm, modeType) {
+                const currentVisc = getKinematicViscosityCst(oilGrade, T_oil);
+
+                let P_base_thermal = 4.1;
+                if (modeType === 'AWS') {
+                    P_base_thermal = 9.6;
+                } else if (modeType === 'AT_LOAD') {
+                    P_base_thermal = 5.4;
+                } else if (modeType === 'DRIVING') {
+                    const rpmNorm = rpm / 1600;
+                    P_base_thermal = 15.4 * Math.pow(rpmNorm, 1.15);
+                } else {
+                    P_base_thermal = 4.1;
+                }
+
+                if (isHvacOn && ambientTemp > 22) {
+                    const acCompressorLoadKw = Math.min(0.85, 0.25 + (ambientTemp - 22) * 0.035);
+                    P_base_thermal += acCompressorLoadKw;
+                }
+
+                const viscFactor = 1 + 0.035 * Math.log10(Math.max(10, currentVisc) / 15) * oilSpec.frictionFactor;
+                const P_total_engine = P_base_thermal * viscFactor;
+
+                const P_to_coolant = P_total_engine * 0.76 * oilSpec.thermalConductivity;
+                const P_to_oil = P_total_engine * 0.24;
+
+                const P_oil_coolant_exchange = 0.045 * (T_coolant - T_oil) * oilSpec.thermalConductivity;
+
+                const deltaT_amb = Math.max(0, T_coolant - ambientTemp);
+                const airflowMultiplier = (modeType === 'DRIVING') ? (1 + 0.12 * (rpm / 1600)) : 1.0;
+                const P_env_loss_coolant = (0.022 * deltaT_amb + 0.00012 * Math.pow(deltaT_amb, 1.3)) * airflowMultiplier;
+                const P_env_loss_oil = 0.014 * Math.max(0, T_oil - ambientTemp) * airflowMultiplier;
+
+                let P_cabin_heater = 0;
+                if (isHvacOn && ambientTemp < 22 && T_coolant > 30) {
+                    const coldDemand = (22 - ambientTemp) / 40;
+                    const maxHeaterDrawKw = Math.min(2.15, 0.18 + 1.45 * coldDemand);
+                    const blowerRamp = Math.min(1.0, Math.max(0.1, (T_coolant - 30) / 25));
+                    const cabinDeficit = Math.min(1.0, Math.max(0.25, (22 - T_cabin) / Math.max(6, 22 - ambientTemp)));
+
+                    P_cabin_heater = maxHeaterDrawKw * blowerRamp * cabinDeficit;
+                    if (P_cabin_heater > peakHvacKw) {
+                        peakHvacKw = P_cabin_heater;
+                    }
+                }
+
+                let effective_C_coolant = C_coolant_base;
+                let P_thermostat_bleed = 0;
+                if (T_coolant > 82.0) {
+                    const openFraction = Math.min(1.0, (T_coolant - 82.0) / 8.0);
+                    effective_C_coolant = 38.0 + (52.0 - 38.0) * openFraction;
+                    P_thermostat_bleed = 0.95 * openFraction * (1 + 0.01 * Math.max(0, 20 - ambientTemp));
+                }
+
+                const totalLossesCoolant = P_oil_coolant_exchange + P_env_loss_coolant + P_cabin_heater + P_thermostat_bleed;
+                const netPowerCoolant = Math.max(P_to_coolant * 0.22, P_to_coolant - totalLossesCoolant);
+
+                const dT_coolant = netPowerCoolant / effective_C_coolant;
+                const dT_oil = Math.max(0.01, (P_to_oil + P_oil_coolant_exchange - P_env_loss_oil) / C_oil_base);
+
+                const P_cabin_loss = 0.016 * Math.max(0, T_cabin - ambientTemp);
+                const dT_cabin = (P_cabin_heater * 0.85 - P_cabin_loss) / C_cabin;
+
+                T_coolant += dT_coolant;
+                T_oil += dT_oil;
+                T_cabin = Math.min(22.0, T_cabin + Math.max(0, dT_cabin));
+            }
+
+            // ЭТАП 1: Система AWS (~1500 об/мин)
+            const coldDelta = Math.max(0, 25 - ambientTemp);
+            const catalystTargetSec = Math.round(16 + 0.68 * coldDelta + 0.033 * Math.pow(coldDelta, 1.80));
+
+            let stage1Sec = 0;
+            while (stage1Sec < 260) {
+                stage1Sec++;
+                stepSecond(1480, 'AWS');
+                const currentOilVisc = getKinematicViscosityCst(oilGrade, T_oil);
+                if (stage1Sec >= catalystTargetSec && currentOilVisc <= oilSpec.pumpLimitCst * 2.2) {
+                    break;
+                }
+            }
+            const stage1EndCoolant = T_coolant;
+
+            // ЭТАП 2: Прогрев АКПП FW6A-EL
+            let stage2Sec = 0;
+            if (ambientTemp < 2) {
+                const subZeroDepth = 2 - ambientTemp;
+                stage2Sec = Math.round(8 + 1.15 * subZeroDepth + 0.078 * Math.pow(subZeroDepth, 1.90));
+            }
+
+            for (let s = 0; s < stage2Sec; s++) {
+                stepSecond(780, 'AT_LOAD');
+            }
+            const stage2EndCoolant = T_coolant;
+
+            // ЭТАП 3: Погасание синей лампы ОЖ (55.0°C)
+            let stage3Sec = 0;
+            const stage3Mode = isInMotion ? 'DRIVING' : 'IDLE';
+            const stage3Rpm = isInMotion ? drivingRpm : 750;
+
+            while (T_coolant < 55.0 && stage3Sec < 3600) {
+                stage3Sec++;
+                stepSecond(stage3Rpm, stage3Mode);
+            }
+
+            // ЭТАП 4: Выход на рабочую температуру (90.0°C)
+            let stage4Sec = 0;
+            const stage4Mode = isInMotion ? 'DRIVING' : 'IDLE';
+            const stage4Rpm = isInMotion ? drivingRpm : 750;
+
+            while (T_coolant < 90.0 && stage4Sec < 3600) {
+                stage4Sec++;
+                stepSecond(stage4Rpm, stage4Mode);
+            }
+
+            return {
+                startViscosity: Math.round(startViscosity),
+                stage1Sec,
+                stage1EndCoolant: Math.round(stage1EndCoolant),
+                stage2Sec,
+                stage2EndCoolant: Math.round(stage2EndCoolant),
+                stage3Sec,
+                stage4Sec,
+                finalOilTemp: Math.round(T_oil),
+                finalCoolantTemp: Math.round(T_coolant),
+                peakHvacKw
+            };
+        }
+
+        /**
+         * ГАЗОДИНАМИЧЕСКИЙ РАСЧЕТ ДАВЛЕНИЯ В ШИНАХ
+         * Закон Гей-Люссака с учетом атмосферного давления 0.99 бар
+         */
+        function calculateTireThermodynamics(targetBar, inflationTempC, ambientTempC) {
+            const P_ATM = 0.99;
+            const T_inf_K = inflationTempC + 273.15;
+            const T_amb_K = ambientTempC + 273.15;
+
+            const carcassFactor = 1 - 0.00025 * (inflationTempC - ambientTempC);
+
+            const P_abs_target_at_amb = targetBar + P_ATM;
+            const P_abs_required_at_inf = P_abs_target_at_amb * (T_inf_K / T_amb_K) * carcassFactor;
+            const requiredGaugeBar = Math.max(0.5, P_abs_required_at_inf - P_ATM);
+
+            const P_abs_unadjusted_at_inf = targetBar + P_ATM;
+            const P_abs_actual_at_amb = P_abs_unadjusted_at_inf * (T_amb_K / T_inf_K) / carcassFactor;
+            const actualAmbientGaugeBar = Math.max(0.4, P_abs_actual_at_amb - P_ATM);
+
+            return {
+                requiredGaugeBar,
+                actualAmbientGaugeBar,
+                deltaBar: requiredGaugeBar - targetBar,
+                unadjustedErrorBar: actualAmbientGaugeBar - targetBar
+            };
+        }
+
+        function formatDuration(totalSeconds) {
+            const sec = Math.max(0, Math.round(totalSeconds));
+            if (sec === 0) return '0 сек';
+            if (sec < 60) return `${sec} сек`;
+            const minutes = Math.floor(sec / 60);
+            const remSec = sec % 60;
+            if (remSec === 0) return `${minutes} мин`;
+            return `${minutes} мин ${remSec} сек`;
+        }
+
+        function formatTempC(temp) {
+            const rounded = Math.round(temp);
+            return rounded > 0 ? `+${rounded}°C` : `${rounded}°C`;
+        }
+
+        const dom = {
+            ambientTempInput: document.getElementById('ambientTempInput'),
+            ambientTempValue: document.getElementById('ambientTempValue'),
+            tireAmbientTempInput: document.getElementById('tireAmbientTempInput'),
+            drivingRpmInput: document.getElementById('drivingRpmInput'),
+            drivingRpmValue: document.getElementById('drivingRpmValue'),
+            drivingRpmLabel: document.getElementById('drivingRpmLabel'),
+            oilBtns: document.querySelectorAll('.oil-btn'),
+            viscosityCstBadge: document.getElementById('viscosityCstBadge'),
+            hvacCheckbox: document.getElementById('hvacCheckbox'),
+            hvacPowerSubtext: document.getElementById('hvacPowerSubtext'),
+            inMotionCheckbox: document.getElementById('inMotionCheckbox'),
+
+            stage1Duration: document.getElementById('stage1Duration'),
+            stage1EndTemp: document.getElementById('stage1EndTemp'),
+            stage2Duration: document.getElementById('stage2Duration'),
+            stage2EndTemp: document.getElementById('stage2EndTemp'),
+            stage2Cumulative: document.getElementById('stage2Cumulative'),
+            stage3Duration: document.getElementById('stage3Duration'),
+            stage3Cumulative: document.getElementById('stage3Cumulative'),
+            stage3ModeHint: document.getElementById('stage3ModeHint'),
+            stage4Duration: document.getElementById('stage4Duration'),
+            stage4Cumulative: document.getElementById('stage4Cumulative'),
+            stage4OilTemp: document.getElementById('stage4OilTemp'),
+
+            thermalSummaryNote: document.getElementById('thermalSummaryNote'),
+            totalWarmupBadge: document.getElementById('totalWarmupBadge'),
+
+            targetPressureInput: document.getElementById('targetPressureInput'),
+            targetPressureValue: document.getElementById('targetPressureValue'),
+            inflationTempInput: document.getElementById('inflationTempInput'),
+            inflationTempValue: document.getElementById('inflationTempValue'),
+            tireAmbientTempMirror: document.getElementById('tireAmbientTempMirror'),
+            tempDeltaBadge: document.getElementById('tempDeltaBadge'),
+            pressureCompensationTag: document.getElementById('pressureCompensationTag'),
+            labelInflTemp: document.getElementById('labelInflTemp'),
+            requiredInflationPressure: document.getElementById('requiredInflationPressure'),
+            requiredInflationKpa: document.getElementById('requiredInflationKpa'),
+            tireCompensationExplanation: document.getElementById('tireCompensationExplanation'),
+            unadjustedBaseLabel: document.getElementById('unadjustedBaseLabel'),
+            unadjustedTempLabel: document.getElementById('unadjustedTempLabel'),
+            unadjustedResultPressure: document.getElementById('unadjustedResultPressure'),
+            unadjustedStatusText: document.getElementById('unadjustedStatusText'),
+
+            gpsSyncBtn: document.getElementById('gpsSyncBtn'),
+            gpsBtnLabel: document.getElementById('gpsBtnLabel'),
+            geoStatusBox: document.getElementById('geoStatusBox'),
+            gpsSyncBtnBottom: document.getElementById('gpsSyncBtnBottom'),
+            gpsBtnLabelBottom: document.getElementById('gpsBtnLabelBottom'),
+            geoStatusBoxBottom: document.getElementById('geoStatusBoxBottom')
+        };
+
+        let currentOilGrade = '5W-40';
+
+        // Двусторонняя синхронизация верхнего и нижнего ползунков уличной температуры
+        function syncAmbientSliders(sourceElement) {
+            const val = parseInt(sourceElement.value, 10);
+            dom.ambientTempInput.value = val;
+            dom.tireAmbientTempInput.value = val;
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            const ambientT = parseInt(dom.ambientTempInput.value, 10);
+            const drivingRpm = parseInt(dom.drivingRpmInput.value, 10);
+            const isInMotion = dom.inMotionCheckbox.checked;
+            const isHvacOn = dom.hvacCheckbox.checked;
+            const targetPressure = parseFloat(dom.targetPressureInput.value);
+            const inflationT = parseInt(dom.inflationTempInput.value, 10);
+
+            // Синхронизация значений обоих ползунков температуры
+            dom.tireAmbientTempInput.value = ambientT;
+            dom.ambientTempValue.textContent = formatTempC(ambientT);
+            dom.tireAmbientTempMirror.textContent = formatTempC(ambientT);
+
+            dom.drivingRpmValue.textContent = isInMotion ? `${drivingRpm} об/мин` : '750 об/мин (ХХ)';
+
+            dom.drivingRpmInput.disabled = !isInMotion;
+            dom.drivingRpmLabel.className = isInMotion
+                ? 'text-xs sm:text-sm font-medium text-slate-300'
+                : 'text-xs sm:text-sm font-medium text-slate-500';
+            dom.drivingRpmValue.className = isInMotion
+                ? 'mono text-base sm:text-lg font-bold text-white'
+                : 'mono text-base sm:text-lg font-bold text-slate-500';
+
+            const sim = runThermodynamicSimulation(ambientT, drivingRpm, currentOilGrade, isInMotion, isHvacOn);
+
+            dom.viscosityCstBadge.textContent = `Вязкость при пуске (${currentOilGrade}): ${sim.startViscosity.toLocaleString('ru-RU')} сСт`;
+
+            if (!isHvacOn) {
+                dom.hvacPowerSubtext.textContent = 'Климат-контроль: отключен (0.0 кВт)';
+                dom.hvacPowerSubtext.className = 'text-[11px] text-slate-500 mono';
+            } else if (ambientT < 22) {
+                dom.hvacPowerSubtext.textContent = `Отбор тепла печкой: до ${sim.peakHvacKw.toFixed(2)} кВт`;
+                dom.hvacPowerSubtext.className = 'text-[11px] text-sky-400 mono';
+            } else if (ambientT > 22) {
+                dom.hvacPowerSubtext.textContent = 'Охлаждение салона (нагрузка А/С)';
+                dom.hvacPowerSubtext.className = 'text-[11px] text-amber-400 mono';
+            } else {
+                dom.hvacPowerSubtext.textContent = 'Тепловое равновесие (+22°C)';
+                dom.hvacPowerSubtext.className = 'text-[11px] text-emerald-400 mono';
+            }
+
+            // Этап 1
+            dom.stage1Duration.textContent = formatDuration(sim.stage1Sec);
+            dom.stage1EndTemp.textContent = `ОЖ: ${formatTempC(sim.stage1EndCoolant)}`;
+
+            // Этап 2
+            const cumStage2 = sim.stage1Sec + sim.stage2Sec;
+            dom.stage2Duration.textContent = sim.stage2Sec > 0 ? formatDuration(sim.stage2Sec) : '0 сек (базовый режим)';
+            dom.stage2EndTemp.textContent = `ОЖ: ${formatTempC(sim.stage2EndCoolant)}`;
+            dom.stage2Cumulative.textContent = `Суммарно с запуска: ${formatDuration(cumStage2)}`;
+
+            // Этап 3
+            const cumStage3 = cumStage2 + sim.stage3Sec;
+            dom.stage3Duration.textContent = formatDuration(sim.stage3Sec);
+            dom.stage3Cumulative.textContent = `Суммарно с запуска: ${formatDuration(cumStage3)}`;
+            dom.stage3ModeHint.textContent = isInMotion
+                ? `Нагрев в движении (${drivingRpm} об/мин)${isHvacOn ? ' + климат Авто 22°C' : ''}`
+                : `Нагрев на холостом ходу (750 об/мин)${isHvacOn ? ' + климат Авто 22°C' : ''}`;
+
+            // Этап 4
+            const cumStage4 = cumStage3 + sim.stage4Sec;
+            dom.stage4OilTemp.textContent = `Масло: ${formatTempC(sim.finalOilTemp)}`;
+            dom.stage4Duration.textContent = formatDuration(sim.stage4Sec);
+            dom.stage4Cumulative.textContent = `Суммарно с запуска: ${formatDuration(cumStage4)}`;
+            dom.totalWarmupBadge.textContent = `Полный цикл до 90°C: ${formatDuration(cumStage4)}`;
+
+            if (!isInMotion && ambientT < -5) {
+                dom.thermalSummaryNote.textContent = 'Длительный холостой ход повышает риск конденсации топлива в масле (прямой впрыск 14:1)';
+            } else if (ambientT <= -25) {
+                dom.thermalSummaryNote.textContent = 'Низкотемпературный режим: плавная нагрузка в первые километры для прогрева приводов и стоек';
+            } else {
+                dom.thermalSummaryNote.textContent = 'Штатный тепловой баланс прогрева с минимальным разжижением масла топливом';
+            }
+
+            // Шинный термо-корректор
+            dom.targetPressureValue.textContent = `${targetPressure.toFixed(2)} бар`;
+            dom.inflationTempValue.textContent = formatTempC(inflationT);
+
+            const tempDiff = ambientT - inflationT;
+            dom.tempDeltaBadge.textContent = `ΔT: ${tempDiff > 0 ? '+' + tempDiff : tempDiff}°C`;
+
+            const tireCalc = calculateTireThermodynamics(targetPressure, inflationT, ambientT);
+
+            dom.labelInflTemp.textContent = formatTempC(inflationT);
+            dom.requiredInflationPressure.textContent = tireCalc.requiredGaugeBar.toFixed(2);
+
+            const kpa = Math.round(tireCalc.requiredGaugeBar * 100);
+            const psi = (tireCalc.requiredGaugeBar * 14.5038).toFixed(1);
+            dom.requiredInflationKpa.textContent = `(${kpa} кПа / ${psi} PSI)`;
+
+            const deltaSign = tireCalc.deltaBar >= 0 ? '+' : '';
+            dom.pressureCompensationTag.textContent = `Поправка: ${deltaSign}${tireCalc.deltaBar.toFixed(2)} бар`;
+
+            if (Math.abs(tireCalc.deltaBar) < 0.03) {
+                dom.pressureCompensationTag.className = 'absolute top-0 right-0 px-3 py-1 bg-emerald-950/90 border-b border-l border-emerald-800/60 rounded-bl-lg text-[11px] mono text-emerald-300';
+            } else if (tireCalc.deltaBar > 0) {
+                dom.pressureCompensationTag.className = 'absolute top-0 right-0 px-3 py-1 bg-sky-950/90 border-b border-l border-sky-800/60 rounded-bl-lg text-[11px] mono text-sky-300';
+            } else {
+                dom.pressureCompensationTag.className = 'absolute top-0 right-0 px-3 py-1 bg-amber-950/90 border-b border-l border-amber-800/60 rounded-bl-lg text-[11px] mono text-amber-300';
+            }
+
+            dom.tireCompensationExplanation.innerHTML =
+                `При переходе из температурной среды <span class="text-slate-200 mono">${formatTempC(inflationT)}</span> в уличные условия (<span class="text-slate-200 mono">${formatTempC(ambientT)}</span>) рабочее давление стабилизируется на целевой отметке <span class="text-emerald-400 font-semibold mono">${targetPressure.toFixed(2)} бар</span>.`;
+
+            dom.unadjustedBaseLabel.textContent = `${targetPressure.toFixed(2)} бар`;
+            dom.unadjustedTempLabel.textContent = formatTempC(inflationT);
+            dom.unadjustedResultPressure.textContent = `${tireCalc.actualAmbientGaugeBar.toFixed(2)} бар`;
+
+            const err = tireCalc.unadjustedErrorBar;
+            if (Math.abs(err) < 0.04) {
+                dom.unadjustedResultPressure.className = 'text-lg sm:text-xl font-bold mono text-emerald-400';
+                dom.unadjustedStatusText.className = 'text-[10px] font-medium uppercase tracking-wider text-emerald-500';
+                dom.unadjustedStatusText.textContent = 'Соответствие норме';
+            } else if (err < 0) {
+                dom.unadjustedResultPressure.className = 'text-lg sm:text-xl font-bold mono text-amber-400';
+                dom.unadjustedStatusText.className = 'text-[10px] font-medium uppercase tracking-wider text-amber-500';
+                dom.unadjustedStatusText.textContent = `Дефицит ${Math.abs(err).toFixed(2)} бар (недокачка)`;
+            } else {
+                dom.unadjustedResultPressure.className = 'text-lg sm:text-xl font-bold mono text-rose-400';
+                dom.unadjustedStatusText.className = 'text-[10px] font-medium uppercase tracking-wider text-rose-500';
+                dom.unadjustedStatusText.textContent = `Избыток +${err.toFixed(2)} бар (перекачка)`;
+            }
+        }
+
+        dom.oilBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentOilGrade = btn.getAttribute('data-oil');
+                dom.oilBtns.forEach(b => {
+                    if (b.getAttribute('data-oil') === currentOilGrade) {
+                        b.className = 'oil-btn px-3 py-1.5 rounded-lg text-xs font-semibold mono border transition-all bg-sky-600/20 text-sky-300 border-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.25)]';
+                    } else {
+                        b.className = 'oil-btn px-3 py-1.5 rounded-lg text-xs font-semibold mono border transition-all bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500';
+                    }
+                });
+                updateDashboard();
+            });
+        });
+
+        ['input', 'change'].forEach(eventType => {
+            dom.ambientTempInput.addEventListener(eventType, () => syncAmbientSliders(dom.ambientTempInput));
+            dom.tireAmbientTempInput.addEventListener(eventType, () => syncAmbientSliders(dom.tireAmbientTempInput));
+            dom.drivingRpmInput.addEventListener(eventType, updateDashboard);
+            dom.hvacCheckbox.addEventListener(eventType, updateDashboard);
+            dom.inMotionCheckbox.addEventListener(eventType, updateDashboard);
+            dom.targetPressureInput.addEventListener(eventType, updateDashboard);
+            dom.inflationTempInput.addEventListener(eventType, updateDashboard);
+        });
+
+        // Синхронное отображение статуса GPS в верхнем и нижнем блоках
+        function setGeoStatus(message, type) {
+            [dom.geoStatusBox, dom.geoStatusBoxBottom].forEach(box => {
+                box.classList.remove(
+                    'hidden',
+                    'bg-rose-950/50', 'border-rose-800/70', 'text-rose-300',
+                    'bg-emerald-950/50', 'border-emerald-800/70', 'text-emerald-300',
+                    'bg-sky-950/50', 'border-sky-800/70', 'text-sky-300'
+                );
+                if (type === 'error') {
+                    box.classList.add('bg-rose-950/50', 'border-rose-800/70', 'text-rose-300');
+                } else if (type === 'success') {
+                    box.classList.add('bg-emerald-950/50', 'border-emerald-800/70', 'text-emerald-300');
+                } else {
+                    box.classList.add('bg-sky-950/50', 'border-sky-800/70', 'text-sky-300');
+                }
+                box.textContent = message;
+            });
+        }
+
+        function setGpsButtonsState(disabled, labelText) {
+            dom.gpsSyncBtn.disabled = disabled;
+            dom.gpsSyncBtnBottom.disabled = disabled;
+            dom.gpsBtnLabel.textContent = labelText;
+            dom.gpsBtnLabelBottom.textContent = labelText;
+        }
+
+        function triggerGpsWeatherSync() {
+            if (!navigator.geolocation) {
+                setGeoStatus('Отсутствие поддержки API спутниковой геолокации в текущем браузере.', 'error');
+                return;
+            }
+
+            if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                setGeoStatus('Ограничение безопасности браузера: доступ к модулю GPS возможен только через защищенное соединение HTTPS.', 'error');
+                return;
+            }
+
+            setGpsButtonsState(true, 'Ожидание сигнала спутников...');
+            setGeoStatus('Запрос точных координат GPS-приемника устройства (высокая точность, без IP-резерва)...', 'info');
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const accuracy = Math.round(position.coords.accuracy || 0);
+
+                    setGpsButtonsState(true, 'Загрузка метеосводки...');
+
+                    try {
+                        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current_weather=true`;
+                        const response = await fetch(url);
+                        if (!response.ok) {
+                            throw new Error('Ошибка ответа метеосервера');
+                        }
+                        const weatherData = await response.json();
+                        const rawTemp = (weatherData.current_weather && typeof weatherData.current_weather.temperature === 'number')
+                            ? weatherData.current_weather.temperature
+                            : (weatherData.current && weatherData.current.temperature_2m);
+                        const actualTemp = Math.round(rawTemp);
+                        const clampedTemp = Math.max(-40, Math.min(40, actualTemp));
+
+                        dom.ambientTempInput.value = clampedTemp;
+                        dom.tireAmbientTempInput.value = clampedTemp;
+                        updateDashboard();
+
+                        setGpsButtonsState(false, `GPS: ${formatTempC(actualTemp)}`);
+                        setGeoStatus(
+                            `Координаты получены (${lat.toFixed(4)}, ${lon.toFixed(4)}, точность ±${accuracy} м). Фактическая температура воздуха: ${formatTempC(actualTemp)}.`,
+                            'success'
+                        );
+                    } catch (fetchErr) {
+                        setGpsButtonsState(false, 'Синхронизация по спутникам GPS');
+                        setGeoStatus('Координаты GPS получены, однако соединение с метеосервером Open-Meteo недоступно.', 'error');
+                    }
+                },
+                (geoErr) => {
+                    setGpsButtonsState(false, 'Синхронизация по спутникам GPS');
+
+                    switch (geoErr.code) {
+                        case geoErr.PERMISSION_DENIED:
+                            setGeoStatus('Отказ в доступе к геолокации в настройках разрешений браузера или системных службах устройства.', 'error');
+                            break;
+                        case geoErr.POSITION_UNAVAILABLE:
+                            setGeoStatus('Сигнал спутников GPS недоступен (экранирование помещения или отключенный датчик геопозиции).', 'error');
+                            break;
+                        case geoErr.TIMEOUT:
+                            setGeoStatus('Превышение лимита времени ожидания отклика от GPS-модуля (15 секунд).', 'error');
+                            break;
+                        default:
+                            setGeoStatus('Аппаратный сбой при обращении к модулю спутниковой навигации.', 'error');
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        dom.gpsSyncBtn.addEventListener('click', triggerGpsWeatherSync);
+        dom.gpsSyncBtnBottom.addEventListener('click', triggerGpsWeatherSync);
+
+        updateDashboard();
+    </script>
+</body>
+</html>
